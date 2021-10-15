@@ -7,9 +7,10 @@
 
 `vim ~/.inputrc`
 
-`set bell-typle none`
+`set bell-style none`
 
 を追記
 
 #### vimが面倒なら
 
+`echo "set bell-style none" >> ~/.inputrc`
