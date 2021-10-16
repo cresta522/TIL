@@ -110,6 +110,9 @@ class UserName()
     }
 }
 
+/**
+ * Model 
+ */
 class User 
 {
     public $userName;
@@ -129,7 +132,7 @@ class UserRepository implements IRepository
 {
     public function save(User $user): void
     {
-        // ..
+        $user->save();
     }
 }
 
@@ -157,6 +160,27 @@ class UserApplicationService
 
 ```
 
+### サービスとは
+
+ここまで、ドメインサービス、アプリケーションサービスを学んだ。
+
+ではそもそも「サービス」とは何かというと、「提供されるもの」である。
+アプリケーションサービスは、アプリケーションを利用するクライアントに**提供される**もので、ドメインサービスはドメインに対して**提供される**ものである。
+
+ドメインサービスは、**ユーザのインスタンスが行わないユーザのふるまい**を定義するクラス。
+例は前述したとおりだが、ユーザAというユーザクラスのインスタンスは「ユーザBが存在するか」を確認するのは**不自然**であるため、モデル(エンティティ)には書かずにドメインサービスに記述するのだ。
+
+ドメインサービスの責務というのはドメインオブジェクトに対してのみであり、ユーザクラスであれば「ユーザに対して」の関数群であるクラス。
+
+アプリケーションは責務が「アプリケーションの利用者」に広がるため、例えば**ユーザが退会する**というのは利用者の操作なのでドメインサービスではない。
+アプリケーションサービスはアプリケーションのユースケースだ。
+違う例を挙げると、**ユーザが存在するか確認する**という処理は同じユーザに関する処理であるがユースケースではないのでドメインサービス。
+
+アプリケーションサービスもドメインサービスも責務の範囲が違うだけで、対象を便利にするよ！っていう関数群を保持するクラスである。
+
+また、サービスは「状態を保持しない」という特徴がある。
+リポジトリなどサービス内で利用する変数は保持してOKだが、条件分岐に用いる変数などサービスの中身を変えうる変数（条件分岐に用いる変数など）は禁止。
+
 ### DTO
 
 ドメインオブジェクトを直接操作できることは危険だとして**DTO**(Data Transfer Object)を用いるのも手だと。
@@ -164,7 +188,6 @@ class UserApplicationService
 ただ、自作フレームワークならまだしも、LaravelのようなエンティティはDTO化できない気がするの。。
 
 意図的にprivateにできないだろうし。
-
 
 ### Command
 
@@ -174,6 +197,46 @@ class UserApplicationService
 ドメインオブジェクトに直接参照しないために作られ、同様に`UserDeleteCommand`や`UserInsertCommand`が作られる。
 
 案件でも**Command**の概念は用いているところはあるが、LaravelのRequestのことだろうと思う。
+
+なので自作するときは`UserUpdateCommand`という**`FormRequest`を継承したクラス**を作る。
+なお、インターフェースを継承して必須項目関数など作っておくとよし。(`IUserCommand`など)
+
+### Factory
+
+通常、リクエストが飛んできたらそれをもとにモデルに値を設定して更新する。
+Controllerに来たRequestがインスタンス化されたモデルの各プロパティに値を設定(場合によってはfillメソッド)する。
+
+これをControllerでやらずに**Factory**クラスを実装するのも手だ。
+
+```php
+function store(Request $request)
+{
+    $user = new User();
+    $user->name = $request->user;
+    $user->save();
+    
+    $user->fill($request->all())->save()
+    
+}
+```
+
+など。これを
+
+
+```php
+function store(Request $request)
+{
+    $user = $this->userFactory.create($request);
+    
+    $this->userRepository->save($user);
+}
+```
+
+とすれば意味合いは通じやすいし、用途も分かれる。
+
+でもLaravelは自動生成する機構としてFactoryが存在してややこしいからやらないかも。
+やるとしたらUserServiceがFactoryの役割を担うかな。
+
 
 ### DDD用のLaravelカスタマイズ
 
